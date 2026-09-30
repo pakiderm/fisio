@@ -1,23 +1,49 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Slot, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { LogBox, Platform, View } from "react-native";
+import { useEffect } from "react";
+import { ActivityIndicator, LogBox, Platform, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { ErrorBoundary } from "@/src/components/error-boundary";
+import { AuthProvider, useAuth } from "@/src/auth-context";
 import { queryClient } from "@/src/query-client";
 import { colors } from "@/src/theme";
 
 LogBox.ignoreAllLogs(true);
 
-// Prewarm the icon fonts (fix icon asset not loading in Expo Go on Android).
 if (Platform.OS !== "web") {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     require("@react-native-vector-icons/ionicons");
   } catch {}
+}
+
+function AuthGate() {
+  const { loading, user } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+    const inAuthGroup = segments[0] === "(auth)";
+    if (!user && !inAuthGroup) {
+      router.replace("/(auth)/login");
+    } else if (user && inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [loading, user, segments, router]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface }}>
+        <ActivityIndicator size="large" color={colors.brandPrimary} />
+      </View>
+    );
+  }
+  return <Slot />;
 }
 
 export default function RootLayout() {
@@ -26,18 +52,14 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.surface }}>
         <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>
-            <KeyboardProvider>
-              <StatusBar style="dark" />
-              <View style={{ flex: 1, backgroundColor: colors.surface }}>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: colors.surface },
-                    animation: "slide_from_right",
-                  }}
-                />
-              </View>
-            </KeyboardProvider>
+            <AuthProvider>
+              <KeyboardProvider>
+                <StatusBar style="dark" />
+                <View style={{ flex: 1, backgroundColor: colors.surface }}>
+                  <AuthGate />
+                </View>
+              </KeyboardProvider>
+            </AuthProvider>
           </QueryClientProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

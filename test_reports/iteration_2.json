@@ -1,0 +1,58 @@
+{
+  "summary": "Backend auth + multi-user isolation testing. Created /app/backend/tests/test_auth_fisiomanager.py (21 tests). 19/21 passing. Verified: 401 on all protected endpoints without/invalid Bearer token; register (201) + duplicate 409 + wrong password 401; /auth/me + /auth/logout invalidation; Google invalid session_id → 401; per-user data isolation for patients/appointments/settings (user B still sees 50€ default after A set 60€); user B cannot GET/PUT/DELETE user A's patients or GET/download A's invoice (404); voice /plan requires auth and is scoped to user; full auth'd invoice flow with user A in April 2026 = 527.0€ (7 × 1.5h @ 50€ + 2€ bollo) with xlsx & PDF generated per user. Two backend bugs found: (1) POST /api/auth/apple with malformed identity_token returns 500 instead of 401 (uncaught jwt.DecodeError in _verify_apple). (2) POST /api/invoices/confirm returns 500 for a user with a single appointment because invoice_generator.py:181 tries to write .value on a MergedCell while clearing leftover template rows. Blocked the per-user 'both users get invoice #1' assertion for the 1-appt case.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/invoices/confirm",
+        "issue": "500 Internal Server Error when confirming an invoice with a small number of appointments (n=1 tested). Root cause: invoice_generator.py:181 does `ws.cell(row=row, column=col).value = None` inside the leftover-rows loop, but the template has merged cells in that range, and openpyxl raises `AttributeError: 'MergedCell' object attribute 'value' is read-only`. Fix: skip MergedCell instances (e.g., check `isinstance(cell, openpyxl.cell.cell.MergedCell)` or unmerge those ranges before clearing). Works for n>=7 (Verdi flow) because DETAIL_START+n bypasses the clearing loop.",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "POST /api/auth/apple",
+        "issue": "Returns 500 (not 401) when identity_token is a malformed JWT. `jwt.get_unverified_header(...)` raises `jwt.exceptions.DecodeError: Invalid header padding` in auth.py:_verify_apple before the try/except. Fix: wrap the header/JWK lookup in try/except and raise HTTPException(401) on jwt.PyJWTError (or wrap the whole verifier). Not exploitable but leaks stacktrace and fails 401 contract.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "GET /api/settings",
+        "issue": "Response Settings.id is set to user_id (the authenticated user's opaque id). It is not a MongoDB _id and no user_id field is leaked, but exposing internal user_id via `id` is inconsistent with other resources (patients/appointments/invoices use their own UUIDs). Consider using a stable value like 'default' or omitting `id` entirely for the singleton."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auth_fisiomanager.py",
+    "/app/test_reports/pytest/pytest_auth_results.xml"
+  ],
+  "action_items": [
+    "Fix invoice_generator.py clearing loop to skip MergedCell (blocks any invoice with fewer than 7 appointments).",
+    "Wrap Apple identity_token verification in try/except jwt.PyJWTError → HTTPException(401) so malformed tokens do not 500.",
+    "(Optional) Update /app/memory/test_credentials.md — it still says 'no authentication is required'; auth is now mandatory. Add a note that tests should register fresh users per run.",
+    "(Optional) Review Settings.id semantics — using authenticated user_id as response 'id' is a mild info-disclosure inconsistency."
+  ],
+  "critical_code_review_comments": [
+    "server.py `list_appointments`/`create_appointment` etc. rely on filtering by user_id via db queries — verified correct across all business endpoints.",
+    "auth.py `_verify_apple` catches jwt.PyJWTError for `jwt.decode` but NOT for `jwt.get_unverified_header` or JWK RSA construction — should wrap the entire function body.",
+    "auth.py bcrypt password hashing is correct (bcrypt.hashpw + checkpw). Register with 'p@ssw0rd!' and login verified end-to-end.",
+    "server.py still uses deprecated @app.on_event startup — informational.",
+    "PublicUser response correctly excludes password_hash, google_sub, apple_sub, _id, created_at."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_auth_fisiomanager.py (created — 21 tests)"
+  ],
+  "success_rate": {
+    "backend": "90% (19/21 passing; 2 real backend bugs)",
+    "frontend": "not tested (backend-only request)"
+  },
+  "seed_data_creation": "Each test run creates fresh users prefixed with TEST_<label>_<uuid8>@example.com (auto-cleaned only in DB restart; users persist). Test patients are prefixed TEST_. One invoice for user A (April 2026, 527€) is created and left behind (delete-blocked by design). Voice test creates and removes a Giulia Ferrari patient for user A.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run: `cd /app/backend && python -m pytest tests/test_auth_fisiomanager.py -v`. BASE_URL from frontend/.env EXPO_PUBLIC_BACKEND_URL. Tests use fresh emails per run (uuid suffix) so they are re-runnable without DB wipe, EXCEPT: TestInvoiceFlow::test_invoice_flow_user_a_527_euros will confirm an invoice for the module-scoped user_a fixture; that user's April 2026 invoice persists. On retest after fix, main agent should verify both failing tests turn green: TestOAuthInvalid::test_apple_invalid_identity_token (expects 401) and TestPerUserInvoiceNumbering::test_both_users_can_have_invoice_number_1 (expects invoice confirm to succeed for 1 appointment).",
+  "rca_of_issue": "Bug 1 (Apple 500): auth.py:_verify_apple invokes jwt.get_unverified_header(identity_token) at the top of the function. If the token isn't a base64url-encoded JWT ('not.a.valid.jwt' in test), pyjwt raises jwt.exceptions.DecodeError('Invalid header padding') which is NOT caught by the later `except jwt.PyJWTError` around jwt.decode. Wrap the whole function or the header/JWK-selection block in try/except jwt.PyJWTError → raise HTTPException(401, 'Invalid Apple token'). Bug 2 (Invoice 500 for n<7): invoice_generator.generate_xlsx iterates rows DETAIL_START+n .. TEMPLATE_LAST_DETAIL and writes None into every cell (line 181). The XLSX template has merged cells in that band; openpyxl forbids .value assignment on MergedCell. Fix pattern: `cell = ws.cell(row=row, column=col); if not isinstance(cell, MergedCell): cell.value = None` — or explicitly `ws.unmerge_cells(...)` for the leftover band before clearing. Reproduce: register user, create 1 appointment in a month, POST /api/invoices/confirm → 500. With 7 appointments the clearing loop is skipped (range is empty) so the previously-passing 527€ flow masks the defect."
+}

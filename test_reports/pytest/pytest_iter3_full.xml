@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="7" failures="20" skipped="0" tests="61" time="17.655" timestamp="2026-09-30T21:31:59.008882+00:00" hostname="agent-env-b733af91-7def-4cf5-928d-5913c791d286"><testcase classname="tests.test_fisiomanager.TestInvoiceFlow" name="test_create_seven_sessions_march_2026" time="0.189"><failure message="KeyError: 'id'">tests/test_fisiomanager.py:334: in test_create_seven_sessions_march_2026
+    "patient_id": invoice_patient["id"],
+                  ^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'id'</failure></testcase><testcase classname="tests.test_fisiomanager.TestInvoiceFlow" name="test_preview_totals_527" time="0.034"><failure message="KeyError: 'id'">tests/test_fisiomanager.py:345: in test_preview_totals_527
+    json={"patient_id": invoice_patient["id"], "year": 2026, "month": 3},
+                        ^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'id'</failure></testcase><testcase classname="tests.test_fisiomanager.TestAppointments" name="test_create_single_appointment" time="0.229"><error message="failed on setup with &quot;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code&quot;">tests/test_fisiomanager.py:147: in test_patient
+    assert r.status_code == 200
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</error></testcase><testcase classname="tests.test_fisiomanager.TestAppointments" name="test_create_recurring_weekly" time="0.000"><error message="failed on setup with &quot;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code&quot;">tests/test_fisiomanager.py:147: in test_patient
+    assert r.status_code == 200
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</error></testcase><testcase classname="tests.test_fisiomanager.TestAppointments" name="test_list_appointments_filter" time="0.000"><error message="failed on setup with &quot;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code&quot;">tests/test_fisiomanager.py:147: in test_patient
+    assert r.status_code == 200
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</error></testcase><testcase classname="tests.test_fisiomanager.TestAppointments" name="test_update_appointment_end_time_recomputes_amount" time="0.000"><error message="failed on setup with &quot;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code&quot;">tests/test_fisiomanager.py:147: in test_patient
+    assert r.status_code == 200
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</error></testcase><testcase classname="tests.test_fisiomanager.TestAppointments" name="test_update_end_before_start_400" time="0.000"><error message="failed on setup with &quot;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code&quot;">tests/test_fisiomanager.py:147: in test_patient
+    assert r.status_code == 200
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</error></testcase><testcase classname="tests.test_fisiomanager.TestAppointments" name="test_update_series_scope_future" time="0.000"><error message="failed on setup with &quot;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code&quot;">tests/test_fisiomanager.py:147: in test_patient
+    assert r.status_code == 200
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</error></testcase><testcase classname="tests.test_fisiomanager.TestAppointments" name="test_delete_series_scope" time="0.000"><error message="failed on setup with &quot;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code&quot;">tests/test_fisiomanager.py:147: in test_patient
+    assert r.status_code == 200
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</error></testcase><testcase classname="tests.test_auth_fisiomanager.TestUnauthenticated" name="test_protected_requires_bearer[/api/patients-get-None]" time="0.108" /><testcase classname="tests.test_fisiomanager.TestInvoiceFlow" name="test_preview_excludes_cancelled" time="0.074"><failure message="KeyError: 'id'">tests/test_fisiomanager.py:363: in test_preview_excludes_cancelled
+    "patient_id": invoice_patient["id"],
+                  ^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'id'</failure></testcase><testcase classname="tests.test_fisiomanager.TestInvoiceFlow" name="test_preview_does_not_increment_number" time="0.113"><failure message="KeyError: 'next_invoice_number'">tests/test_fisiomanager.py:382: in test_preview_does_not_increment_number
+    before = api_client.get(f"{BASE_URL}/api/settings").json()["next_invoice_number"]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'next_invoice_number'</failure></testcase><testcase classname="tests.test_auth_fisiomanager.TestUnauthenticated" name="test_protected_requires_bearer[/api/settings-get-None]" time="0.107" /><testcase classname="tests.test_fisiomanager.TestInvoiceFlow" name="test_confirm_invoice_march_2026" time="0.112"><failure message="KeyError: 'next_invoice_number'">tests/test_fisiomanager.py:392: in test_confirm_invoice_march_2026
+    num_before = settings_before["next_invoice_number"]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'next_invoice_number'</failure></testcase><testcase classname="tests.test_auth_fisiomanager.TestUnauthenticated" name="test_protected_requires_bearer[/api/appointments-get-None]" time="0.073" /><testcase classname="tests.test_auth_fisiomanager.TestUnauthenticated" name="test_protected_requires_bearer[/api/invoices-get-None]" time="0.115" /><testcase classname="tests.test_fisiomanager.TestInvoiceFlow" name="test_confirm_duplicate_month_blocked" time="0.075"><failure message="KeyError: 'id'">tests/test_fisiomanager.py:431: in test_confirm_duplicate_month_blocked
+    json={"patient_id": invoice_patient["id"], "year": 2026, "month": 3},
+                        ^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'id'</failure></testcase><testcase classname="tests.test_fisiomanager.TestInvoiceFlow" name="test_get_invoice_and_list" time="0.034"><failure message="AttributeError: type object 'TestInvoiceFlow' has no attribute 'invoice_id'">tests/test_fisiomanager.py:436: in test_get_invoice_and_list
+    inv_id = TestInvoiceFlow.invoice_id
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: type object 'TestInvoiceFlow' has no attribute 'invoice_id'</failure></testcase><testcase classname="tests.test_auth_fisiomanager.TestUnauthenticated" name="test_protected_requires_bearer[/api/voice/plan-post-payload4]" time="0.065" /><testcase classname="tests.test_auth_fisiomanager.TestUnauthenticated" name="test_invalid_bearer_token" time="0.083" /><testcase classname="tests.test_fisiomanager.TestInvoiceFlow" name="test_download_xlsx_and_pdf" time="0.079"><failure message="AttributeError: type object 'TestInvoiceFlow' has no attribute 'invoice_id'">tests/test_fisiomanager.py:447: in test_download_xlsx_and_pdf
+    inv_id = TestInvoiceFlow.invoice_id
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: type object 'TestInvoiceFlow' has no attribute 'invoice_id'</failure></testcase><testcase classname="tests.test_fisiomanager.TestInvoiceFlow" name="test_patient_history_contains_march" time="0.034"><failure message="KeyError: 'id'">tests/test_fisiomanager.py:488: in test_patient_history_contains_march
+    r = api_client.get(f"{BASE_URL}/api/patients/{invoice_patient['id']}/history")
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'id'</failure></testcase><testcase classname="tests.test_fisiomanager.TestPatientsCRUD" name="test_create_patient" time="0.080"><failure message="assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_fisiomanager.py:79: in test_create_patient
+    assert r.status_code == 200
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_fisiomanager.TestInvoiceFlow" name="test_patient_month_history_contains_invoice" time="0.075"><failure message="KeyError: 'id'">tests/test_fisiomanager.py:500: in test_patient_month_history_contains_invoice
+    f"{BASE_URL}/api/patients/{invoice_patient['id']}/history/2026/3"
+                               ^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'id'</failure></testcase><testcase classname="tests.test_fisiomanager.TestPatientsCRUD" name="test_get_patient" time="0.000"><failure message="IndexError: list index out of range">tests/test_fisiomanager.py:88: in test_get_patient
+    pid = TestPatientsCRUD.created_ids[0]
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   IndexError: list index out of range</failure></testcase><testcase classname="tests.test_fisiomanager.TestPatientsCRUD" name="test_search_patients_fuzzy" time="0.034"><failure message="assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_fisiomanager.py:95: in test_search_patients_fuzzy
+    assert r.status_code == 200
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_fisiomanager.TestInvoiceFlow" name="test_delete_patient_blocked_by_invoice" time="0.032"><failure message="KeyError: 'id'">tests/test_fisiomanager.py:509: in test_delete_patient_blocked_by_invoice
+    r = api_client.delete(f"{BASE_URL}/api/patients/{invoice_patient['id']}")
+                                                     ^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'id'</failure></testcase><testcase classname="tests.test_auth_fisiomanager.TestAuthEmailPassword" name="test_register_returns_session_and_user" time="0.288" /><testcase classname="tests.test_fisiomanager.TestPatientsCRUD" name="test_update_patient" time="0.000"><failure message="IndexError: list index out of range">tests/test_fisiomanager.py:100: in test_update_patient
+    pid = TestPatientsCRUD.created_ids[0]
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   IndexError: list index out of range</failure></testcase><testcase classname="tests.test_fisiomanager.TestPatientsCRUD" name="test_import_patients" time="0.037"><failure message="assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_fisiomanager.py:117: in test_import_patients
+    assert r.status_code == 200
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_fisiomanager.TestPatientsCRUD" name="test_delete_patient_not_found" time="0.201"><failure message="assert 401 == 404&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_fisiomanager.py:129: in test_delete_patient_not_found
+    assert r.status_code == 404
+E   assert 401 == 404
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_auth_fisiomanager.TestAuthEmailPassword" name="test_duplicate_register_conflict" time="0.568" /><testcase classname="tests.test_bugfixes_and_issue_date" name="test_invoice_confirm_handles_variable_appt_count[1-2026-2]" time="1.447" /><testcase classname="tests.test_auth_fisiomanager.TestAuthEmailPassword" name="test_login_success_and_wrong_password" time="0.856" /><testcase classname="tests.test_bugfixes_and_issue_date" name="test_invoice_confirm_handles_variable_appt_count[3-2026-3]" time="0.915" /><testcase classname="tests.test_auth_fisiomanager.TestAuthEmailPassword" name="test_me_with_and_without_token" time="0.543" /><testcase classname="tests.test_auth_fisiomanager.TestAuthEmailPassword" name="test_logout_invalidates_token" time="0.414" /><testcase classname="tests.test_bugfixes_and_issue_date" name="test_invoice_confirm_handles_variable_appt_count[5-2026-4]" time="1.004" /><testcase classname="tests.test_bugfixes_and_issue_date.TestIssueDateFeature" name="test_issue_date_provided_reflects_in_response_and_xlsx" time="0.829" /><testcase classname="tests.test_bugfixes_and_issue_date.TestIssueDateFeature" name="test_issue_date_omitted_defaults_to_today" time="0.345" /><testcase classname="tests.test_bugfixes_and_issue_date" name="test_invoice_confirm_handles_variable_appt_count[7-2026-5]" time="0.886" /><testcase classname="tests.test_bugfixes_and_issue_date.TestIssueDateFeature" name="test_issue_date_invalid_returns_400" time="0.370" /><testcase classname="tests.test_bugfixes_and_issue_date.TestIssueDateFeature" name="test_issue_date_other_invalid_formats_return_400" time="4.542" /><testcase classname="tests.test_bugfixes_and_issue_date" name="test_invoice_confirm_handles_variable_appt_count[10-2026-6]" time="5.231" /><testcase classname="tests.test_bugfixes_and_issue_date.TestAppleMalformedToken" name="test_apple_not_a_jwt_returns_401" time="1.875" /><testcase classname="tests.test_auth_fisiomanager.TestIsolation" name="test_patient_created_by_a_not_visible_to_b" time="1.141" /><testcase classname="tests.test_bugfixes_and_issue_date.TestAppleMalformedToken" name="test_apple_empty_token_returns_401" time="0.086" /><testcase classname="tests.test_bugfixes_and_issue_date.TestAppleMalformedToken" name="test_apple_bad_base64_header_returns_401" time="0.074" /><testcase classname="tests.test_auth_fisiomanager.TestOAuthInvalid" name="test_google_invalid_session_id" time="0.263" /><testcase classname="tests.test_auth_fisiomanager.TestIsolation" name="test_appointments_isolated" time="0.640" /><testcase classname="tests.test_auth_fisiomanager.TestOAuthInvalid" name="test_apple_invalid_identity_token" time="0.077" /><testcase classname="tests.test_auth_fisiomanager.TestInvoiceFlow" name="test_invoice_flow_user_a_527_euros" time="2.827" /><testcase classname="tests.test_auth_fisiomanager.TestIsolation" name="test_settings_per_user" time="0.338" /><testcase classname="tests.test_auth_fisiomanager.TestVoiceAuth" name="test_voice_plan_requires_auth" time="0.075" /><testcase classname="tests.test_auth_fisiomanager.TestVoiceAuth" name="test_voice_plan_scoped_to_user" time="3.961" /><testcase classname="tests.test_auth_fisiomanager.TestInvoiceFlow" name="test_user_b_cannot_download_user_a_invoice" time="0.459" /><testcase classname="tests.test_fisiomanager.TestSettings" name="test_get_settings_singleton_defaults" time="0.035"><failure message="assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">tests/test_fisiomanager.py:28: in test_get_settings_singleton_defaults
+    assert r.status_code == 200
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="tests.test_fisiomanager.TestSettings" name="test_put_settings_updates_and_persists" time="0.036"><failure message="KeyError: 'hourly_rate'">tests/test_fisiomanager.py:43: in test_put_settings_updates_and_persists
+    original_rate = cur["hourly_rate"]
+                    ^^^^^^^^^^^^^^^^^^
+E   KeyError: 'hourly_rate'</failure></testcase><testcase classname="tests.test_auth_fisiomanager.TestPerUserInvoiceNumbering" name="test_both_users_can_have_invoice_number_1" time="1.237" /><testcase classname="tests.test_fisiomanager.TestVoice" name="test_transcribe_without_file_returns_4xx" time="0.072" /><testcase classname="tests.test_fisiomanager.TestVoice" name="test_voice_plan_create_appointment" time="0.116"><failure message="KeyError: 'id'">tests/test_fisiomanager.py:536: in test_voice_plan_create_appointment
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"Missing bearer token"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code
+
+During handling of the above exception, another exception occurred:
+tests/test_fisiomanager.py:549: in test_voice_plan_create_appointment
+    params={"patient_id": p["id"]},
+                          ^^^^^^^
+E   KeyError: 'id'</failure></testcase></testsuite></testsuites>

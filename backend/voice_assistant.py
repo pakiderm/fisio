@@ -194,11 +194,11 @@ def _norm_name(s: str) -> str:
     return re.sub(r"\s+", " ", s.strip().lower())
 
 
-async def _find_patient(db, name: str) -> Optional[dict]:
+async def _find_patient(db, user_id: str, name: str) -> Optional[dict]:
     if not name:
         return None
     name = _norm_name(name)
-    docs = await db.patients.find({}, {"_id": 0}).to_list(2000)
+    docs = await db.patients.find({"user_id": user_id}, {"_id": 0, "user_id": 0}).to_list(2000)
     # Exact
     for p in docs:
         full = _norm_name(f"{p['first_name']} {p['last_name']}")
@@ -217,9 +217,9 @@ async def _find_patient(db, name: str) -> Optional[dict]:
 
 
 async def _find_appointment(
-    db, when_date: str, start: Optional[str], patient_id: Optional[str]
+    db, user_id: str, when_date: str, start: Optional[str], patient_id: Optional[str]
 ) -> Optional[dict]:
-    q: dict[str, Any] = {"date": when_date}
+    q: dict[str, Any] = {"user_id": user_id, "date": when_date}
     if start:
         q["start_time"] = start
     if patient_id:
@@ -227,16 +227,15 @@ async def _find_appointment(
     docs = await db.appointments.find(q, {"_id": 0}).to_list(20)
     if docs:
         return docs[0]
-    # Try without start_time
     if start:
-        q2 = {"date": when_date}
+        q2: dict[str, Any] = {"user_id": user_id, "date": when_date}
         if patient_id:
             q2["patient_id"] = patient_id
         return await db.appointments.find_one(q2, {"_id": 0})
     return None
 
 
-async def execute_actions(db, actions: list[dict], settings: dict) -> list[dict]:
+async def execute_actions(db, actions: list[dict], settings: dict, user_id: str) -> list[dict]:
     from calendar import monthrange  # noqa
 
     results = []
@@ -247,7 +246,7 @@ async def execute_actions(db, actions: list[dict], settings: dict) -> list[dict]
         try:
             if op == "create_appointment":
                 pname = a.get("patient", "")
-                p = await _find_patient(db, pname)
+                p = await _find_patient(db, user_id, pname)
                 if not p:
                     results.append({"ok": False, "op": op, "error": f"Paziente non trovato: {pname}"})
                     continue
@@ -264,6 +263,7 @@ async def execute_actions(db, actions: list[dict], settings: dict) -> list[dict]
                 rate = p.get("custom_hourly_rate") or hourly_rate_default
                 appt = {
                     "id": str(uuid.uuid4()),
+                    "user_id": user_id,
                     "patient_id": p["id"],
                     "date": d_iso,
                     "start_time": start,
@@ -279,7 +279,7 @@ async def execute_actions(db, actions: list[dict], settings: dict) -> list[dict]
                 }
                 await db.appointments.insert_one(appt)
                 appt.pop("_id", None)
-                # remove datetime for json
+                appt.pop("user_id", None)
                 appt["created_at"] = appt["created_at"].isoformat() + "Z"
                 results.append({
                     "ok": True,
@@ -289,14 +289,16 @@ async def execute_actions(db, actions: list[dict], settings: dict) -> list[dict]
                 })
             elif op in ("cancel_appointment", "delete_appointment", "set_status"):
                 pname = a.get("patient", "")
-                p = await _find_patient(db, pname) if pname else None
-                appt = await _find_appointment(db, a.get("date", ""), a.get("start"), p["id"] if p else None)
+                p = await _find_patient(db, user_id, pname) if pname else None
+                appt = await _find_appointment(
+                    db, user_id, a.get("date", ""), a.get("start"), p["id"] if p else None
+                )
                 if not appt:
                     results.append({"ok": False, "op": op, "error": "Appuntamento non trovato"})
                     continue
                 if op == "cancel_appointment":
                     await db.appointments.update_one(
-                        {"id": appt["id"]}, {"$set": {"status": "cancelled"}}
+                        {"id": appt["id"], "user_id": user_id}, {"$set": {"status": "cancelled"}}
                     )
                     results.append({
                         "ok": True,
@@ -311,7 +313,7 @@ async def execute_actions(db, actions: list[dict], settings: dict) -> list[dict]
                             "error": "Non elimino: già fatturata",
                         })
                         continue
-                    await db.appointments.delete_one({"id": appt["id"]})
+                    await db.appointments.delete_one({"id": appt["id"], "user_id": user_id})
                     results.append({
                         "ok": True,
                         "op": op,
@@ -322,7 +324,7 @@ async def execute_actions(db, actions: list[dict], settings: dict) -> list[dict]
                     if status not in {"scheduled", "completed", "cancelled"}:
                         status = "scheduled"
                     await db.appointments.update_one(
-                        {"id": appt["id"]}, {"$set": {"status": status}}
+                        {"id": appt["id"], "user_id": user_id}, {"$set": {"status": status}}
                     )
                     results.append({
                         "ok": True,
@@ -340,14 +342,18 @@ async def execute_actions(db, actions: list[dict], settings: dict) -> list[dict]
                 delta = (tw_d - fw_d).days
                 fw_end = (fw_d + timedelta(days=6)).isoformat()
                 src = await db.appointments.find(
-                    {"date": {"$gte": fw, "$lte": fw_end}, "status": {"$ne": "cancelled"}},
+                    {
+                        "user_id": user_id,
+                        "date": {"$gte": fw, "$lte": fw_end},
+                        "status": {"$ne": "cancelled"},
+                    },
                     {"_id": 0},
                 ).to_list(200)
                 created = 0
                 for s in src:
                     new_date = (date.fromisoformat(s["date"]) + timedelta(days=delta)).isoformat()
-                    # Skip if identical already exists
                     exists = await db.appointments.find_one({
+                        "user_id": user_id,
                         "patient_id": s["patient_id"],
                         "date": new_date,
                         "start_time": s["start_time"],
@@ -357,6 +363,7 @@ async def execute_actions(db, actions: list[dict], settings: dict) -> list[dict]
                     new_appt = {
                         **s,
                         "id": str(uuid.uuid4()),
+                        "user_id": user_id,
                         "date": new_date,
                         "status": "scheduled",
                         "recurring_series_id": None,

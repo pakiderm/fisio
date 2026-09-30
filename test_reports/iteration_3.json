@@ -1,0 +1,57 @@
+{
+  "summary": "Iteration 3 re-verification: both iteration-2 bugs fixed and the new optional issue_date feature works. Ran 33 backend tests total — 21 existing auth/isolation tests (test_auth_fisiomanager.py) plus 12 new regression tests (test_bugfixes_and_issue_date.py). ALL 33 PASSING (100%). Verified: (1) BUG FIX 1 — POST /api/invoices/confirm now succeeds for n=1, 3, 5, 7 and 10 appointments in different months (Feb–Jun 2026); the MergedCell skip in invoice_generator.py works and every generated xlsx opens cleanly with openpyxl. (2) BUG FIX 2 — POST /api/auth/apple returns 401 (not 500) for 'not.a.valid.jwt', 'garbage', and '@@@.@@@.@@@' (bad base64 header). auth.py:_verify_apple now wraps header/JWK extraction in try/except. (3) NEW FEATURE issue_date — with issue_date='2026-07-15' the response.issue_date matches and the generated xlsx B8 cell contains 2026-07-15 (verified via openpyxl datetime cell); when omitted it falls back to today's ISO date; 'not-a-date', '15/07/2026', '2026-13-40', '2026-02-30' all return 400. Existing flows unaffected: register/login/logout, /auth/me, 401 on missing/bad token, cross-user isolation (patients/appointments/settings/invoices/voice), per-user invoice numbering (both users independently get #1), and the full 527€ April-2026 flow still produces valid xlsx+PDF. Note: test_fisiomanager.py (the pre-auth legacy suite) shows 20 failures/7 errors because it never sends Bearer tokens — those are expected and superseded by test_auth_fisiomanager.py; recommend deleting or auth-migrating it.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/invoices/confirm",
+        "issue": "issue_date=\"\" (empty string) is treated as \"not provided\" (falsy check on payload.issue_date) and silently falls back to today. Not a spec violation (spec only requires 'not-a-date' -> 400) but inconsistent with other invalid strings. Consider changing `if payload.issue_date:` to `if payload.issue_date is not None:` so an explicit empty string yields 400."
+      },
+      {
+        "endpoint": "GET /api/settings",
+        "issue": "(carry-over from iter 2, still present) Response Settings.id is set to the authenticated user's opaque user_id. Not a leak of a foreign id but inconsistent with other resources that use their own UUIDs. Consider omitting `id` for the singleton or using a stable value."
+      },
+      {
+        "endpoint": "legacy tests/test_fisiomanager.py",
+        "issue": "Pre-auth test file still present; 20 failed / 7 errored on last run because it never sends Bearer tokens. Superseded by test_auth_fisiomanager.py. Recommend deletion (or migration) to keep `pytest tests/` green."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auth_fisiomanager.py",
+    "/app/backend/tests/test_bugfixes_and_issue_date.py",
+    "/app/test_reports/pytest/pytest_iter3_relevant.xml",
+    "/app/test_reports/pytest/pytest_iter3_newtests.xml",
+    "/app/test_reports/pytest/pytest_iter3_full.xml"
+  ],
+  "action_items": [
+    "(Optional / minor) Change `if payload.issue_date:` -> `if payload.issue_date is not None:` in server.py:invoice_confirm so an explicit empty string is rejected with 400 for consistency.",
+    "(Optional cleanup) Delete or auth-migrate /app/backend/tests/test_fisiomanager.py — it is the pre-auth suite and now always fails when run against the auth-gated backend.",
+    "(Optional carry-over) Review Settings response id semantics."
+  ],
+  "critical_code_review_comments": [
+    "auth.py:_verify_apple — header/JWK extraction is now inside try/except; jwt.PyJWTError → HTTPException(401). Verified on 3 malformed inputs.",
+    "invoice_generator.py — the leftover-rows clearing loop now `isinstance(cell, MergedCell)` skips read-only merged cells; verified on 1,3,5,7,10 appts.",
+    "server.py:invoice_confirm — issue_date parsed with date.fromisoformat and raises HTTPException(400) on ValueError; xlsx generator receives the parsed date so B8 shows the requested date. Good.",
+    "server.py:invoice_confirm empty-string falsy-check on payload.issue_date is the only inconsistency (see minor issue).",
+    "PublicUser response still correctly excludes password_hash, google_sub, apple_sub, _id, created_at."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_bugfixes_and_issue_date.py (created — 12 regression tests: 5 parametrized appt-count cases, 3 Apple 401 cases, 4 issue_date behavior cases)"
+  ],
+  "success_rate": {
+    "backend": "100% (33/33 on the relevant auth + regression suites: 21 auth + 12 regression). Legacy pre-auth test_fisiomanager.py fails as expected since it doesn't send Bearer tokens.",
+    "frontend": "not tested (backend-only request)"
+  },
+  "seed_data_creation": "Each run creates fresh TEST_<label>_<uuid8>@example.com users. Test patients prefixed TEST_. Invoices for the new merged_user (Feb–Jun 2026) and issue_date_user (Jul–Oct 2026) plus the existing user_a April-2026 invoice persist per-user; no shared/global state affected.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: `cd /app/backend && python -m pytest tests/test_auth_fisiomanager.py tests/test_bugfixes_and_issue_date.py -v`. BASE_URL comes from frontend/.env EXPO_PUBLIC_BACKEND_URL. Do NOT run tests/test_fisiomanager.py directly — it's the pre-auth legacy file and will fail with 401s. All 33 tests currently green. Both iter-2 bugs and the new issue_date feature are fully verified.",
+  "rca_of_issue": "N/A — both iter-2 bugs are fixed. Bug 1 (MergedCell) confirmed by 5 parametrized tests spanning n=1/3/5/7/10 across different months. Bug 2 (Apple 500) confirmed by 3 malformed-token tests all returning 401. Only remaining minor: empty-string issue_date silently defaults to today (see backend_issues.minor)."
+}

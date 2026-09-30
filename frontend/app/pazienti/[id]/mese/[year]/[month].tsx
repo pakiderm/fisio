@@ -3,9 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,7 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, downloadUrl } from "@/src/api";
-import { MONTHS_IT, euro, fmtDayShort, minutesToText } from "@/src/format";
+import { MONTHS_IT, euro, fmtDayLong, fmtDayShort, fromISODate, minutesToText, toISODate } from "@/src/format";
 import { colors, radius, spacing } from "@/src/theme";
 import type { Appointment, Invoice, InvoicePreview, Patient } from "@/src/types";
 
@@ -27,6 +29,8 @@ export default function MonthDetailScreen() {
   const yearN = Number(year);
   const monthN = Number(month);
   const qc = useQueryClient();
+  const [issueDate, setIssueDate] = useState<string>(toISODate(new Date()));
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const patientQ = useQuery({
     queryKey: ["patient", id],
@@ -56,6 +60,7 @@ export default function MonthDetailScreen() {
         patient_id: id,
         year: yearN,
         month: monthN,
+        issue_date: issueDate,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["month", id, yearN, monthN] });
@@ -159,6 +164,19 @@ export default function MonthDetailScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Anteprima fattura</Text>
             <Row label="Numero" value={preview.next_invoice_number_full} />
+            <TouchableOpacity
+              testID="pick-issue-date"
+              onPress={() => setShowDatePicker(true)}
+              style={styles.issueDateRow}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowLabel}>Data di emissione</Text>
+                <Text style={styles.issueDateValue}>
+                  {fmtDayLong(fromISODate(issueDate))}
+                </Text>
+              </View>
+              <Ionicons name="calendar" size={20} color={colors.brandPrimary} />
+            </TouchableOpacity>
             <Row
               label="Paziente"
               value={`${preview.patient.last_name} ${preview.patient.first_name}`}
@@ -206,7 +224,7 @@ export default function MonthDetailScreen() {
               if (fatturabili.length === 0) return;
               Alert.alert(
                 "Conferma emissione",
-                `Vuoi emettere la fattura ${preview?.next_invoice_number_full}?\nTotale ${euro(
+                `Emettere la fattura ${preview?.next_invoice_number_full} del ${fmtDayShort(issueDate)}?\nTotale ${euro(
                   preview?.total ?? 0,
                 )}`,
                 [
@@ -232,6 +250,130 @@ export default function MonthDetailScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      {showDatePicker && (
+        <DatePickerModal
+          initial={issueDate}
+          onCancel={() => setShowDatePicker(false)}
+          onSelect={(v) => {
+            setIssueDate(v);
+            setShowDatePicker(false);
+          }}
+        />
+      )}
+    </View>
+  );
+}
+
+/* ---- Simple date-picker modal ---- */
+function DatePickerModal({
+  initial,
+  onCancel,
+  onSelect,
+}: {
+  initial: string;
+  onCancel: () => void;
+  onSelect: (iso: string) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const init = fromISODate(initial);
+  const [year, setYear] = useState(init.getFullYear());
+  const [month, setMonth] = useState(init.getMonth());
+  const [day, setDay] = useState(init.getDate());
+  const daysIn = new Date(year, month + 1, 0).getDate();
+  const years = Array.from({ length: 8 }, (_, i) => new Date().getFullYear() - 2 + i);
+  return (
+    <Modal transparent animationType="slide" onRequestClose={onCancel}>
+      <View style={styles.backdrop}>
+        <View style={[styles.datePickerCard, { paddingBottom: insets.bottom + 16 }]}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <TouchableOpacity onPress={onCancel} testID="dp-cancel">
+              <Text style={{ color: colors.muted, fontSize: 16 }}>Annulla</Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 17, fontWeight: "700", color: colors.onSurface }}>
+              Data di emissione
+            </Text>
+            <TouchableOpacity
+              testID="dp-ok"
+              onPress={() => {
+                const d = Math.min(day, daysIn);
+                onSelect(
+                  `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
+                );
+              }}
+            >
+              <Text style={{ color: colors.brandPrimary, fontWeight: "700", fontSize: 16 }}>OK</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={{ flexDirection: "row", gap: spacing.md }}>
+            <PickerColumn
+              testIDPrefix="dp-day"
+              values={Array.from({ length: daysIn }, (_, i) => i + 1)}
+              selected={day}
+              onSelect={setDay}
+              format={(v) => String(v)}
+            />
+            <PickerColumn
+              testIDPrefix="dp-month"
+              values={MONTHS_IT.map((_, i) => i)}
+              selected={month}
+              onSelect={setMonth}
+              format={(v) => MONTHS_IT[v]}
+            />
+            <PickerColumn
+              testIDPrefix="dp-year"
+              values={years}
+              selected={year}
+              onSelect={setYear}
+              format={(v) => String(v)}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function PickerColumn<T>({
+  values,
+  selected,
+  onSelect,
+  format,
+  testIDPrefix,
+}: {
+  values: T[];
+  selected: T;
+  onSelect: (v: T) => void;
+  format: (v: T) => string;
+  testIDPrefix: string;
+}) {
+  return (
+    <View style={{ flex: 1, height: 200, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md }}>
+      <ScrollView contentContainerStyle={{ paddingVertical: 8 }}>
+        {values.map((v, i) => (
+          <TouchableOpacity
+            key={i}
+            testID={`${testIDPrefix}-${String(v)}`}
+            onPress={() => onSelect(v)}
+            style={{
+              paddingVertical: 8,
+              alignItems: "center",
+              backgroundColor:
+                String(selected) === String(v) ? colors.brandTertiary : "transparent",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 15,
+                color: String(selected) === String(v) ? colors.brandPrimary : colors.onSurface,
+                fontWeight: String(selected) === String(v) ? "700" : "400",
+              }}
+            >
+              {format(v)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -354,4 +496,32 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   smallBtnText: { color: colors.brandPrimary, fontWeight: "700" },
+
+  issueDateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: spacing.sm,
+    marginVertical: 6,
+    borderRadius: radius.sm,
+    backgroundColor: colors.brandTertiary,
+  },
+  issueDateValue: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.onSurface,
+    marginTop: 2,
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  datePickerCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing.lg,
+  },
 });

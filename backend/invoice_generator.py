@@ -175,16 +175,24 @@ def generate_xlsx(
         else:
             ws.cell(row=row, column=8, value=f"=IF(G{row},H$14,0)")
 
-    # Clear leftover template rows (from n .. TEMPLATE_LAST_DETAIL) if n < 7
+    # Clear leftover template rows (from n .. TEMPLATE_LAST_DETAIL) if n < 7.
+    # Skip MergedCell instances (they are read-only, the top-left of the merge holds
+    # the value and we cleared it via the "master" cell reference above).
+    from openpyxl.cell.cell import MergedCell as _MergedCell
     for row in range(DETAIL_START + n, TEMPLATE_LAST_DETAIL + 1):
         for col in range(1, 9):
-            ws.cell(row=row, column=col).value = None
+            cell = ws.cell(row=row, column=col)
+            if isinstance(cell, _MergedCell):
+                continue
+            cell.value = None
 
     # Also clear A21..A23 that come with 1.5 in template
     for row in range(TEMPLATE_LAST_DETAIL + 1, TEMPLATE_A_LAST + 1):
         # Only clear if we did not insert extra rows there
         if row > end_detail_row:
-            ws.cell(row=row, column=1).value = None
+            cell = ws.cell(row=row, column=1)
+            if not isinstance(cell, _MergedCell):
+                cell.value = None
 
     # --- Recompute summary rows ---
     # After potential inserts, the summary block original rows (31..36) have shifted.

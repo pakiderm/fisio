@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,12 +16,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/src/api";
+import { useAuth } from "@/src/auth-context";
 import { colors, radius, spacing } from "@/src/theme";
 import type { Settings } from "@/src/types";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const { user, signOut } = useAuth();
   const settingsQ = useQuery({
     queryKey: ["settings"],
     queryFn: () => api.get<Settings>("/settings"),
@@ -149,6 +152,42 @@ export default function SettingsScreen() {
             <Text style={{ color: colors.success, fontWeight: "700" }}>Salvato</Text>
           </View>
         )}
+
+        <Section title="Account">
+          <View style={{ gap: 6 }}>
+            <Text style={styles.fieldLabel}>Utente</Text>
+            <Text style={styles.accountValue}>
+              {user?.first_name} {user?.last_name}
+            </Text>
+            {!!user?.email && (
+              <Text style={styles.accountEmail}>{user.email}</Text>
+            )}
+            <View style={styles.providers}>
+              {(user?.auth_providers ?? []).map((p) => (
+                <View key={p} style={styles.provPill}>
+                  <Text style={styles.provText}>{p}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+          <TouchableOpacity
+            testID="logout-btn"
+            onPress={() =>
+              Alert.alert("Esci", "Vuoi disconnetterti?", [
+                { text: "Annulla", style: "cancel" },
+                {
+                  text: "Esci",
+                  style: "destructive",
+                  onPress: () => signOut(),
+                },
+              ])
+            }
+            style={styles.logoutBtn}
+          >
+            <Ionicons name="log-out-outline" size={18} color={colors.error} />
+            <Text style={styles.logoutText}>Esci</Text>
+          </TouchableOpacity>
+        </Section>
       </ScrollView>
 
       <View
@@ -264,4 +303,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveText: { color: colors.onBrandPrimary, fontWeight: "700", fontSize: 16 },
+  accountValue: { fontSize: 16, fontWeight: "700", color: colors.onSurface },
+  accountEmail: { fontSize: 13, color: colors.muted },
+  providers: { flexDirection: "row", gap: 6, marginTop: 6 },
+  provPill: {
+    backgroundColor: colors.brandTertiary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+  },
+  provText: { color: colors.onBrandTertiary, fontSize: 11, fontWeight: "700" },
+  logoutBtn: {
+    marginTop: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  logoutText: { color: colors.error, fontWeight: "700", fontSize: 15 },
 });

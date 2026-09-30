@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.emergent.appointmentinvoice.ij82hx",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Serve per dettare gli appuntamenti a voce"
       }
@@ -46,10 +47,11 @@
       "expo-sharing",
       "@react-native-community/datetimepicker",
       "@react-native-vector-icons/ionicons",
-      "expo-audio"
+      "expo-audio",
+      "expo-apple-authentication"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": false
     }
   }
 }
