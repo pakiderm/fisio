@@ -4,7 +4,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -25,6 +24,7 @@ export default function PatientDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const [showDelete, setShowDelete] = useState(false);
 
   const patientQ = useQuery({
     queryKey: ["patient", params.id],
@@ -162,26 +162,64 @@ export default function PatientDetailScreen() {
           <TouchableOpacity
             testID="delete-patient"
             style={styles.deleteBtn}
-            onPress={() =>
-              Alert.alert(
-                "Eliminare paziente?",
-                "Verranno rimosse anche tutte le terapie. Le fatture emesse restano archiviate.",
-                [
-                  { text: "Annulla", style: "cancel" },
-                  {
-                    text: "Elimina",
-                    style: "destructive",
-                    onPress: () => del.mutate(),
-                  },
-                ],
-              )
-            }
+            onPress={() => setShowDelete(true)}
           >
             <Ionicons name="trash" size={16} color={colors.error} />
             <Text style={styles.deleteText}>Elimina paziente</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showDelete}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDelete(false)}
+      >
+        <View style={styles.backdrop}>
+          <View style={styles.confirmCard}>
+            <View style={[styles.confirmIcon, { backgroundColor: "#FFF0F0" }]}>
+              <Ionicons name="trash" size={26} color={colors.error} />
+            </View>
+            <Text style={styles.confirmTitle}>Eliminare paziente?</Text>
+            <Text style={styles.confirmBody}>
+              Verranno rimosse anche tutte le terapie. Le fatture emesse restano archiviate.
+            </Text>
+            {del.isError && (
+              <View style={styles.errBox}>
+                <Ionicons name="alert-circle" size={16} color={colors.error} />
+                <Text style={styles.errText}>{(del.error as Error).message}</Text>
+              </View>
+            )}
+            <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.md, alignSelf: "stretch" }}>
+              <TouchableOpacity
+                testID="delete-cancel"
+                onPress={() => setShowDelete(false)}
+                disabled={del.isPending}
+                style={[styles.confirmBtn, { backgroundColor: colors.surfaceSecondary }]}
+              >
+                <Text style={{ color: colors.onSurface, fontWeight: "700" }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="delete-ok"
+                onPress={() => del.mutate()}
+                disabled={del.isPending}
+                style={[
+                  styles.confirmBtn,
+                  { backgroundColor: colors.error },
+                  del.isPending && { opacity: 0.6 },
+                ]}
+              >
+                {del.isPending ? (
+                  <ActivityIndicator color={colors.onError} />
+                ) : (
+                  <Text style={{ color: colors.onError, fontWeight: "700" }}>Elimina</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -298,4 +336,56 @@ const styles = StyleSheet.create({
     borderColor: colors.error,
   },
   deleteText: { color: colors.error, fontWeight: "700" },
+
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+  },
+  confirmCard: {
+    marginHorizontal: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignItems: "center",
+  },
+  confirmIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.brandTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.onSurface,
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  confirmBody: {
+    fontSize: 14,
+    color: colors.onSurfaceSecondary,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  confirmBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errBox: {
+    marginTop: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    padding: spacing.sm,
+    backgroundColor: "#FFF0F0",
+    borderRadius: radius.sm,
+  },
+  errText: { color: colors.error, fontSize: 13, flex: 1 },
 });

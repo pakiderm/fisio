@@ -3,8 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -31,6 +31,7 @@ export default function SettingsScreen() {
 
   const [form, setForm] = useState<Settings | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [showLogout, setShowLogout] = useState(false);
 
   useEffect(() => {
     if (settingsQ.data && !form) setForm(settingsQ.data);
@@ -172,16 +173,7 @@ export default function SettingsScreen() {
           </View>
           <TouchableOpacity
             testID="logout-btn"
-            onPress={() =>
-              Alert.alert("Esci", "Vuoi disconnetterti?", [
-                { text: "Annulla", style: "cancel" },
-                {
-                  text: "Esci",
-                  style: "destructive",
-                  onPress: () => signOut(),
-                },
-              ])
-            }
+            onPress={() => setShowLogout(true)}
             style={styles.logoutBtn}
           >
             <Ionicons name="log-out-outline" size={18} color={colors.error} />
@@ -189,6 +181,42 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </Section>
       </ScrollView>
+
+      <Modal
+        visible={showLogout}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogout(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Ionicons name="log-out-outline" size={36} color={colors.error} />
+            <Text style={styles.modalTitle}>Esci dal profilo?</Text>
+            <Text style={styles.modalBody}>
+              Dovrai reinserire le credenziali per rientrare.
+            </Text>
+            <View style={{ flexDirection: "row", gap: spacing.sm, alignSelf: "stretch", marginTop: spacing.md }}>
+              <TouchableOpacity
+                testID="logout-cancel"
+                onPress={() => setShowLogout(false)}
+                style={[styles.modalBtn, { backgroundColor: colors.surfaceSecondary }]}
+              >
+                <Text style={{ color: colors.onSurface, fontWeight: "700" }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="logout-confirm"
+                onPress={async () => {
+                  setShowLogout(false);
+                  await signOut();
+                }}
+                style={[styles.modalBtn, { backgroundColor: colors.error }]}
+              >
+                <Text style={{ color: colors.onError, fontWeight: "700" }}>Esci</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <View
         style={[
@@ -325,4 +353,36 @@ const styles = StyleSheet.create({
     borderColor: colors.error,
   },
   logoutText: { color: colors.error, fontWeight: "700", fontSize: 15 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCard: {
+    marginHorizontal: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.onSurface,
+    marginTop: spacing.sm,
+  },
+  modalBody: {
+    fontSize: 14,
+    color: colors.muted,
+    textAlign: "center",
+    marginTop: 4,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

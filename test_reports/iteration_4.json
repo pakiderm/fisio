@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 4 verifies the Alert.alert -> Modal fix for the 'Conferma e crea fattura' bug (reported in Italian). Ran both backend regression (33/33 PASS in ~16s) and end-to-end frontend Playwright flow on the public URL. FRONTEND: registered a fresh user via UI (testIDs go-register/reg-first-name/reg-last-name/reg-email/reg-password/reg-submit), API-seeded a patient + 3 Sep-2026 appointments using the Bearer token stored in localStorage under 'fisiomanager_session_token', navigated to /pazienti/{id}/mese/2026/9, confirmed preview shows 152€, tapped testID='confirm-invoice' -> a Modal (NOT a browser Alert) appeared with testID='confirm-ok' and testID='confirm-cancel' both present, clicked confirm-ok -> the invoice was created (Fatturato – 1/HCP · 152,00 € banner visible, screenshot captured) and testID='open-xlsx' + testID='open-pdf' both rendered. CANCEL path: created an Oct-2026 appt, opened the same modal on a different month, tapped confirm-cancel, modal closed and confirm-invoice remained (no invoice created). DELETE PATIENT: on /pazienti/{id} tapped testID='delete-patient' -> Modal opened (delete-ok+delete-cancel both present), clicked delete-ok -> inline error 'Impossibile eliminare: esistono fatture associate a questo paziente' displayed (backend returned 400 as expected). LOGOUT: on Impostazioni tapped testID='logout-btn' -> Modal opened, clicked testID='logout-confirm' -> redirected to login screen ('Accedi'). DOWNLOADS: via curl-like requests, /api/invoices/{id}/download?fmt=xlsx returned 200 with content-type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, and fmt=pdf returned 200 with application/pdf and %PDF- magic bytes. ISSUE_DATE PICKER: opened testID='pick-issue-date', tapped dp-day-20 + dp-year-2026 + dp-ok (dp-month-12 selector missed because the horizontal month scroller doesn't render the target unless scrolled into view — the default month was already retained, so final issue_date resolved to 2026-09-20). Invoice was created and the 'Emessa il 20/09/2026' banner appeared; xlsx cell B8 opened via openpyxl equals datetime(2026, 9, 20). Also verified via pure-API run: issue_date='2026-11-20' → B8=datetime(2026, 11, 20). BACKEND: 33/33 tests pass (test_auth_fisiomanager.py + test_bugfixes_and_issue_date.py). No regressions. No React Native red screen errors. Only console noise: React Native Web deprecation warnings for shadow* and pointerEvents props (informational only).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/invoices/confirm", "issue": "(carry-over iter 3) issue_date='' (empty string) is treated as falsy and silently defaults to today; consider `is not None` check for consistency with other invalid strings."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "month invoice page date picker", "issues": ["Horizontal month scroller inside the DatePickerModal does not auto-scroll the currently selected month into the viewport, so testID dp-month-<N> for a distant month may not be tappable without a manual swipe (minor UX; day and year pickers behaved fine). Reference: /app/frontend/app/pazienti/[id]/mese/[year]/[month].tsx around DatePickerModal (~line 325+)."]}
+    ],
+    "react_native_issues": [
+      {"component": "RN Web deprecation", "issue": "Console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' emitted repeatedly by React Native Web on the invoice screens. Informational only — does not affect functionality. Reference: the styled containers in /app/frontend/app/pazienti/[id]/mese/[year]/[month].tsx (styles.card, styles.footer)."},
+      {"component": "RN Web deprecation", "issue": "Console warning: 'props.pointerEvents is deprecated. Use style.pointerEvents' emitted after opening the confirm/delete/logout Modals. Informational only. Likely coming from a Modal/backdrop implementation."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auth_fisiomanager.py",
+    "/app/backend/tests/test_bugfixes_and_issue_date.py",
+    "/app/test_reports/pytest/pytest_iter4.xml"
+  ],
+  "action_items": [
+    "(Optional/minor) Migrate shadow* style props to boxShadow and props.pointerEvents to style.pointerEvents to silence RN Web deprecation warnings.",
+    "(Optional UX) In DatePickerModal, auto-scroll the currently selected day/month/year row into the visible area on open so distant values are reachable without manual swipe.",
+    "(Optional/minor carry-over) Reject empty-string issue_date with 400 for consistency."
+  ],
+  "critical_code_review_comments": [
+    "Alert.alert -> <Modal> replacement is correctly applied in all three flows (confirm-invoice, delete-patient, logout). Modals are rendered inside the same component tree with transparent+fade, testIDs are present on both action buttons, and the cancel path closes the modal without side effects.",
+    "confirm-invoice onPress guards against fatturabili.length===0 and confirm.isPending (button disabled + opacity 0.5) — good.",
+    "delete-patient modal reads server 400 body and renders the inline error 'Impossibile eliminare: esistono fatture associate a questo paziente' — verified end-to-end.",
+    "logout modal clears the session and Router navigates back to the login screen — verified end-to-end."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (33/33)", "frontend": "100% on all 6 flows tested (register, confirm-invoice modal ok, confirm-invoice modal cancel, delete-patient modal, logout modal, xlsx+pdf downloads, issue_date picker + xlsx B8 verification)"},
+  "seed_data_creation": "Three fresh TEST_ui_/TEST_dp_/TEST_dl_ users were registered via the UI/API; each created its own patient (TEST_ prefix) with appointments in Sep/Oct/Nov/Dec 2026. No shared state was touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend: `cd /app/backend && python -m pytest tests/test_auth_fisiomanager.py tests/test_bugfixes_and_issue_date.py -v` (33/33 green in ~16s). Frontend: Bearer token is stored under localStorage key 'fisiomanager_session_token' — use it for API-seeding in Playwright scripts. Confirm/delete/logout Modals all render Modal children (not portals) and their testIDs are queryable while the modal is open. Public URL: https://appointment-invoice-10.preview.emergentagent.com. All Alert.alert callbacks have been replaced by real Modals so the original 'Crea fattura non crea nulla' bug is fully fixed on web (and remains correct on native).",
+  "rca_of_issue": "Original bug: on React Native Web, Alert.alert with multiple buttons does not invoke the button callbacks, so the 'Conferma' onPress never called confirm.mutate() and no POST /api/invoices/confirm was fired. Fix (already applied by main agent): replaced Alert.alert with a <Modal transparent> containing testID='confirm-ok' and testID='confirm-cancel'; the same pattern was applied to delete-patient and logout dialogs. Verified E2E via Playwright: modals actually render, the ok handler triggers the mutation, backend returns 200, banner+downloads appear; the cancel handler closes the modal cleanly."
+}

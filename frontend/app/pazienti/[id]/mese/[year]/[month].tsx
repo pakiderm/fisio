@@ -6,7 +6,6 @@ import * as FileSystem from "expo-file-system/legacy";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Platform,
   ScrollView,
@@ -63,12 +62,14 @@ export default function MonthDetailScreen() {
         issue_date: issueDate,
       }),
     onSuccess: () => {
+      setShowConfirm(false);
       qc.invalidateQueries({ queryKey: ["month", id, yearN, monthN] });
       qc.invalidateQueries({ queryKey: ["history", id] });
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["appointments"] });
     },
   });
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const openInvoice = async (inv: Invoice, fmt: "xlsx" | "pdf") => {
     const url = downloadUrl(inv.id, fmt);
@@ -222,16 +223,7 @@ export default function MonthDetailScreen() {
             testID="confirm-invoice"
             onPress={() => {
               if (fatturabili.length === 0) return;
-              Alert.alert(
-                "Conferma emissione",
-                `Emettere la fattura ${preview?.next_invoice_number_full} del ${fmtDayShort(issueDate)}?\nTotale ${euro(
-                  preview?.total ?? 0,
-                )}`,
-                [
-                  { text: "Annulla", style: "cancel" },
-                  { text: "Conferma", onPress: () => confirm.mutate() },
-                ],
-              );
+              setShowConfirm(true);
             }}
             disabled={fatturabili.length === 0 || confirm.isPending}
             style={[
@@ -250,6 +242,70 @@ export default function MonthDetailScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Confirmation modal (works on web + native, unlike Alert.alert on web) */}
+      <Modal
+        visible={showConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConfirm(false)}
+      >
+        <View style={styles.backdrop}>
+          <View style={styles.confirmCard}>
+            <View style={styles.confirmIcon}>
+              <Ionicons name="receipt" size={28} color={colors.brandPrimary} />
+            </View>
+            <Text style={styles.confirmTitle}>Confermi emissione?</Text>
+            <Text style={styles.confirmBody}>
+              Fattura{" "}
+              <Text style={{ fontWeight: "700" }}>
+                {preview?.next_invoice_number_full}
+              </Text>{" "}
+              del{" "}
+              <Text style={{ fontWeight: "700" }}>{fmtDayShort(issueDate)}</Text>
+            </Text>
+            <Text style={styles.confirmTotal}>
+              Totale {euro(preview?.total ?? 0)}
+            </Text>
+            {confirm.isError && (
+              <View style={styles.errBox}>
+                <Ionicons name="alert-circle" size={16} color={colors.error} />
+                <Text style={styles.errText}>
+                  {(confirm.error as Error).message}
+                </Text>
+              </View>
+            )}
+            <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.md }}>
+              <TouchableOpacity
+                testID="confirm-cancel"
+                onPress={() => setShowConfirm(false)}
+                disabled={confirm.isPending}
+                style={[styles.confirmBtn, { backgroundColor: colors.surfaceSecondary }]}
+              >
+                <Text style={{ color: colors.onSurface, fontWeight: "700" }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="confirm-ok"
+                onPress={() => confirm.mutate()}
+                disabled={confirm.isPending}
+                style={[
+                  styles.confirmBtn,
+                  { backgroundColor: colors.brandPrimary },
+                  confirm.isPending && { opacity: 0.6 },
+                ]}
+              >
+                {confirm.isPending ? (
+                  <ActivityIndicator color={colors.onBrandPrimary} />
+                ) : (
+                  <Text style={{ color: colors.onBrandPrimary, fontWeight: "700" }}>
+                    Conferma
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {showDatePicker && (
         <DatePickerModal
@@ -524,4 +580,56 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.lg,
     padding: spacing.lg,
   },
+  confirmCard: {
+    marginHorizontal: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignItems: "center",
+  },
+  confirmIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.brandTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.onSurface,
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  confirmBody: {
+    fontSize: 14,
+    color: colors.onSurfaceSecondary,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  confirmTotal: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: colors.brandPrimary,
+    marginTop: 6,
+  },
+  confirmBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errBox: {
+    marginTop: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    padding: spacing.sm,
+    backgroundColor: "#FFF0F0",
+    borderRadius: radius.sm,
+  },
+  errText: { color: colors.error, fontSize: 13, flex: 1 },
 });
