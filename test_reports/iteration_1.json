@@ -1,0 +1,39 @@
+{
+  "summary": "Backend-only regression testing for FisioManager. Wrote a comprehensive pytest suite (28 tests, all passing) covering settings singleton + updates, patients CRUD/search/import/history, appointments (single/recurring, filters, scope=single/future/series updates & deletes, duration/amount recomputation on end_time change, invalid time 400), invoice preview (525€ imponibile + 2€ bollo = 527€ for 7×1.5h @ 50€), preview excludes cancelled, preview does NOT increment counter, invoice confirm marks appointments as invoiced and increments counter, duplicate-month confirm blocked (400), invoiced appointment cannot be updated (400), patient with invoices cannot be deleted (400), invoice list/get/download in xlsx & pdf, XLSX template cells (A1 professional, A7='Fattura n', B7=number_full, G7=UPPER name, G8=CF, C11 'Pratica HCP <code>', A14=hours, C14='Seduta fisioterapia', G14=SUM formula, H14='esente', H15=IF formula, bollo/imponibile/totale rows), voice /plan with gpt-5.4 (creates appointment from Italian text), /voice/transcribe existence, UUIDs everywhere and no MongoDB _id leaks in responses.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_fisiomanager.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py uses deprecated FastAPI @app.on_event startup/shutdown hooks — consider migrating to lifespan context manager (non-blocking, informational).",
+    "voice_assistant.py uses datetime.utcnow() (deprecated in Python 3.12+) — prefer datetime.now(timezone.utc). Currently harmless but worth updating.",
+    "invoice_generator.py imports 'os', 'Alignment', 'Border', 'Font', 'PatternFill', 'Side', 'get_column_letter', 'mm', 'Optional' that are unused. Minor cleanup opportunity.",
+    "server.py has line-length >100 in several places (e.g., L544). Consider running black/isort as part of CI.",
+    "invoice numbering: counter advance uses next_invoice_number+1 but if a higher 'number' was skipped due to duplicate collision (while loop), settings.next_invoice_number could lag behind actual max. Current logic still finds an unused number on next confirm, so correctness holds, but the counter can appear stale to the UI."
+  ],
+  "updated_files": [
+    "/app/backend/tests/conftest.py (created)",
+    "/app/backend/tests/test_fisiomanager.py (created)"
+  ],
+  "success_rate": {
+    "backend": "100% (28/28)",
+    "frontend": "not tested (backend-only request)"
+  },
+  "seed_data_creation": "Tests create TEST_-prefixed patients (TEST_Marco Rossi, TEST_Anna Bianchi, TEST_Luca Verdi, plus temporary import rows and a Giulia Ferrari for the voice test). Best-effort cleanup: appointments and patients are removed at end where possible; TEST_Luca Verdi remains because it has an issued invoice (525€ imponibile + 2€ = 527€ for March 2026, invoice number auto-assigned) and delete is blocked by design. Existing manual seed (Arienzo Maria, invoice 1/HCP Jan 2026) was NOT touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Base URL comes from frontend/.env EXPO_PUBLIC_BACKEND_URL. Run: `cd /app/backend && python -m pytest tests/test_fisiomanager.py -v`. The invoice confirm test (test_confirm_invoice_march_2026) is state-dependent — once run it leaves a March-2026 invoice for TEST_Luca Verdi and cannot be re-run without DB cleanup. For subsequent runs, either drop invoices/appointments/patients for TEST_-prefixed users or change month/year in the fixture. Voice test hits real gpt-5.4 (EMERGENT_LLM_KEY) and takes ~3-8s; not deterministic but currently passing.",
+  "rca_of_issue": "N/A — no issues found. All 28 backend tests pass: settings singleton + update, patients CRUD + fuzzy search + import + history (year/month tree with invoice info), appointments create (single/recurring weekly with common recurring_series_id), filter by date range + patient, update recomputes duration/amount and enforces end>start, scope-based updates/deletes on series, invoice preview (correct 527€ math with 7×1.5h @ 50€ + 2€ bollo, excludes cancelled, no counter increment), invoice confirm (blocks duplicate month with 400, generates xlsx via openpyxl faithful to template — A1/A7/B7/G7 upper/G8 CF/C11 Pratica HCP <code>/A14 hours/C14 Seduta fisioterapia/G14 SUM formula with rate/H14 esente/H15+ IF formula/bollo/imponibile/totale rows — plus PDF via reportlab, marks appts invoice_id, blocks further edits on invoiced appts and patient deletion), download xlsx/pdf returns correct MIME + content, voice /plan with real gpt-5.4 correctly interprets 'Domani alle 9 metti Giulia Ferrari per un'ora e mezza' into a create_appointment action executed successfully, /voice/transcribe returns 4xx without a file. All ids are UUID v4, no _id leaks in any response."
+}

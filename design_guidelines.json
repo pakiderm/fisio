@@ -1,0 +1,182 @@
+{
+  "app_name": "FisioManager",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "Un'interfaccia pulita, affidabile e focalizzata sull'efficienza quotidiana per gestire pazienti e fatturazione con la fluidità e velocità di un'app nativa iOS.",
+  "color": {
+    "surface": "#FFFFFF",
+    "onSurface": "#1C1C1E",
+    "surfaceSecondary": "#F2F2F7",
+    "onSurfaceSecondary": "#1C1C1E",
+    "surfaceTertiary": "#E5E5EA",
+    "onSurfaceTertiary": "#1C1C1E",
+    "surfaceInverse": "#1C1C1E",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#5B8A72",
+    "onBrand": "#FFFFFF",
+    "brandPrimary": "#5B8A72",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#D8E6DE",
+    "onBrandSecondary": "#385A48",
+    "brandTertiary": "#EAF1ED",
+    "onBrandTertiary": "#385A48",
+    "success": "#34C759",
+    "onSuccess": "#FFFFFF",
+    "warning": "#FF9500",
+    "onWarning": "#FFFFFF",
+    "error": "#FF3B30",
+    "onError": "#FFFFFF",
+    "info": "#007AFF",
+    "onInfo": "#FFFFFF",
+    "border": "#E5E5EA",
+    "borderStrong": "#C7C7CC",
+    "divider": "#E5E5EA",
+    "muted": "#8E8E93"
+  },
+  "typography": {
+    "displayFontFamily": "Plus Jakarta Sans",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous iOS native margins. Use 16pt (lg) horizontal padding for main screens, 12pt (md) between grouped items.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": 1,
+  "navigation": "bottom_tabs",
+  "icon_set": "Ionicons",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use over the sticky bottom tab bar",
+      "Use for sticky top headers when content scrolls beneath (like Calendar day list)",
+      "Use for floating action button (+ button) base in brandTertiary"
+    ],
+    "dont's": [
+      "Do not use on regular data cards",
+      "Do not use on form inputs",
+      "Do not over-layer glass on top of glass"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Calendario",
+      "purpose": "Schermata principale (Daily agenda): visualizzazione e inserimento rapidissimo delle terapie con un solo tocco.",
+      "states": {
+        "loading": "Spinner centrato o skeleton per la giornata.",
+        "empty": "Nessun appuntamento. Illustrazione astratta con testo 'Giornata libera' e tasto centrale per inserire una terapia.",
+        "error": "Errore caricamento calendario. Tasto Riprova."
+      },
+      "layout": "Sticky header con Segmented Control (Giorno/Sett/Mese). Sotto, vista Agenda giornaliera (Google Calendar style). Ogni appuntamento è una card colorata per stato (Es: brand per confermato, muted per annullato). Floating Action Button (+) sticky in basso a destra per creazione rapida, in glass su brandTertiary."
+    },
+    {
+      "name": "Nuova Terapia (BottomSheet)",
+      "purpose": "Creazione o modifica terapia minimizzando il numero di tocchi. Form ultra veloce.",
+      "states": {
+        "loading": "Skeleton dei field input.",
+        "empty": "Non applicabile",
+        "error": "Banner errore sopra il bottone 'Salva'."
+      },
+      "layout": "Bottom sheet modale. Selezione paziente tramite search as you type, selettore orario nativo rotante o chip rapidi (es. 9:00, 9:30). Calcolo durata automatico. Tasto 'Salva' sticky in basso (KeyboardAvoidingView) che non scompare scrollando."
+    },
+    {
+      "name": "Pazienti",
+      "purpose": "Elenco dei pazienti, ricerca veloce e accesso all'anagrafica e storico.",
+      "states": {
+        "loading": "Skeleton rows.",
+        "empty": "Testo 'Nessun paziente in rubrica' e CTA 'Aggiungi Paziente'.",
+        "error": "Errore di caricamento rubrica con tasto Riprova."
+      },
+      "layout": "Search bar sticky in alto con glass effect. Lista nativa iOS alfabetica o per inserimento recente. Ogni riga include iniziali (se manca logo) in cerchio brandTertiary e chevron a destra. Tasto aggiungi in alto a destra o FAB."
+    },
+    {
+      "name": "Dettaglio Paziente & Storico",
+      "purpose": "Visualizza l'anagrafica, i totali e le fatture storiche, organizzate gerarchicamente (Anno -> Mese -> Terapie).",
+      "states": {
+        "loading": "Skeleton view.",
+        "empty": "Il paziente non ha ancora terapie. Tasto 'Aggiungi Terapia' o 'Genera Prima Fattura'.",
+        "error": "Errore caricamento storico."
+      },
+      "layout": "In alto: Header esteso con immagine/texture verde salvia (sfumata scura sotto il testo) contenente il nome e KPI (Totale Sedute, Importo, Ore). Sotto: Lista gerarchica tramite card o accordion per Anno e poi Mesi. Pulsante sticky 'Crea Fattura Mese' visibile se ci sono terapie non fatturate."
+    },
+    {
+      "name": "Fatture (Archivio)",
+      "purpose": "Consultazione veloce, filtro e riapertura dei file Excel generati.",
+      "states": {
+        "loading": "Skeleton rows.",
+        "empty": "Icona documento e testo 'Nessuna fattura emessa'.",
+        "error": "Errore caricamento archivio con tasto Riprova."
+      },
+      "layout": "Header con barra filtri sticky in alto (Filtra per Anno/Mese/Paziente). Card elenco con Badge 'Fatturato' verde, numero fattura e importo, stile iOS pulito (surfaceSecondary). Toccando la card si apre il documento/anteprima."
+    },
+    {
+      "name": "Anteprima Fattura",
+      "purpose": "Validazione visiva della lista di terapie prima della generazione definitiva.",
+      "states": {
+        "loading": "Spinner e testo 'Preparazione calcoli...'",
+        "empty": "Nessuna prestazione da fatturare.",
+        "error": "Errore caricamento dati prestazione."
+      },
+      "layout": "Layout formale in sola lettura, simile a una fattura cartacea ma riadattata per mobile. Totale in grande in alto. Lista prestazioni con date. Sticky CTA a fondo schermo: 'Genera Fattura' (verde brillante)."
+    },
+    {
+      "name": "Impostazioni",
+      "purpose": "Gestione dati fiscali e preferenze generali.",
+      "states": {
+        "loading": "Non applicabile",
+        "empty": "Non applicabile",
+        "error": "Errore caricamento impostazioni."
+      },
+      "layout": "Classica vista iOS 'Settings' (grouped list) in surfaceSecondary. Righe separate per Tariffa Oraria, Numero Partenza, Dati Professionista. Nessuna autenticazione, tutto salvato localmente o via iCloud."
+    }
+  ],
+  "images": {
+    "empty_state_medical": {
+      "url": "https://images.unsplash.com/photo-1630226040750-d934f017f0e4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzV8MHwxfHNlYXJjaHwxfHxwaHlzaW90aGVyYXB5JTIwY2xpbmljJTIwbWluaW1hbHxlbnwwfHx8fDE3OTA4MDAzMjR8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Black and white minimal massage bed, representing an empty clinical state"
+    },
+    "patient_header_texture": {
+      "url": "https://images.unsplash.com/photo-1564352969906-8b7f46ba4b8b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMHNhZ2UlMjBncmVlbiUyMHdhdGVyY29sb3IlMjB0ZXh0dXJlfGVufDB8fHx8MTc5MDgwMDMyNHww&ixlib=rb-4.1.0&q=85",
+      "alt": "Abstract mint green watercolor background used for patient detail headers"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the color palette mapped in 'color'. Avoid any default blues or purples entirely, as per system prompt guidelines. The brand color is Sage Green.",
+    "Implement haptics on every core interaction: tab changes, segment control toggles, and saving an appointment (success).",
+    "In the Calendar Agenda View, render a sticky FAB (Floating Action Button) above the bottom tab bar. Keep safe-area margins clear.",
+    "Any bottom sheets for 'New Therapy' or 'Create Invoice' must be robustly built with keyboard-avoiding views so input fields and sticky action buttons are never obscured.",
+    "For the 'Patient Header Texture' or any image containing text overlaid, YOU MUST apply the vertical linear-gradient scrim (transparent to surfaceInverse >= 70%) to ensure text readability.",
+    "There is no authentication required (local-first design), but ensure UI reflects a state ready to fetch/persist data.",
+    "Use 'brandTertiary' background with the entity's initials (weight 500) inside a circle for patient avatars as a fallback since real medical patient logos do not exist.",
+    "The primary action buttons (like 'Salva', 'Genera Fattura') must be sticky at the bottom with proper safe-area padding."
+  ]
+}
